@@ -47,7 +47,12 @@ public class GraphContext {
         super();
         this.validatorContext = validatorContext;
         this.path = path;
-        this.value = value;
+        this.value = value == null ? value : validatorContext.getInstanceResolvers().stream()
+                .map(resolver -> resolver.resolveInstance(value))
+                .filter(Objects::nonNull)
+                .filter(resolved -> resolved != value) //just use it if something new was resolved
+                .findFirst()
+                .orElse(value);
         this.parent = parent;
     }
 

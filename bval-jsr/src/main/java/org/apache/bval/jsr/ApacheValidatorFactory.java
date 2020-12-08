@@ -23,8 +23,10 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 
@@ -47,12 +49,16 @@ import org.apache.bval.jsr.metadata.MetadataBuilder.ForBean;
 import org.apache.bval.jsr.metadata.MetadataBuilders;
 import org.apache.bval.jsr.metadata.MetadataSource;
 import org.apache.bval.jsr.util.AnnotationsManager;
+import org.apache.bval.jsr.resolver.InstanceResolver;
 import org.apache.bval.jsr.valueextraction.ValueExtractors;
 import org.apache.bval.jsr.valueextraction.ValueExtractors.OnDuplicateContainerElementKey;
 import org.apache.bval.util.CloseableAble;
 import org.apache.bval.util.reflection.Reflection;
 import org.apache.commons.weaver.privilizer.Privilizing;
 import org.apache.commons.weaver.privilizer.Privilizing.CallTo;
+
+import static java.util.Collections.unmodifiableList;
+import static java.util.stream.Collectors.toList;
 
 /**
  * Description: a factory is a complete configurated object that can create
@@ -112,6 +118,7 @@ public class ApacheValidatorFactory implements ValidatorFactory, Cloneable {
     private ConstraintValidatorFactory constraintValidatorFactory;
     private ParameterNameProvider parameterNameProvider;
     private ClockProvider clockProvider;
+    private List<InstanceResolver> instanceResolvers;
 
     /**
      * Create a new ApacheValidatorFactory instance.
@@ -226,6 +233,12 @@ public class ApacheValidatorFactory implements ValidatorFactory, Cloneable {
         }
     }
 
+    public void setInstanceResolvers(List<InstanceResolver> instanceResolvers) {
+        if (instanceResolvers != null) {
+            this.instanceResolvers = instanceResolvers;
+        }
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -276,6 +289,10 @@ public class ApacheValidatorFactory implements ValidatorFactory, Cloneable {
         } catch (final Exception e) {
             // no-op
         }
+    }
+
+    public List<InstanceResolver> getInstanceResolvers() {
+        return instanceResolvers;
     }
 
     /**
@@ -379,5 +396,13 @@ public class ApacheValidatorFactory implements ValidatorFactory, Cloneable {
                 ms.initialize(this);
                 ms.process(configuration, getConstraintsCache()::add, addBuilder);
             });
+
+
+        Set<InstanceResolver> instanceResolvers =
+            new HashSet<>(participantFactory.loadServices(InstanceResolver.class));
+
+        this.instanceResolvers = unmodifiableList(instanceResolvers.stream()
+                .sorted()
+                .collect(toList()));
     }
 }

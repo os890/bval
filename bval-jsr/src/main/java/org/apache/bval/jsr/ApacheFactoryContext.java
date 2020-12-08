@@ -18,7 +18,9 @@
  */
 package org.apache.bval.jsr;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Supplier;
 
 import javax.validation.ClockProvider;
@@ -31,6 +33,7 @@ import javax.validation.Validator;
 import javax.validation.ValidatorContext;
 import javax.validation.valueextraction.ValueExtractor;
 
+import org.apache.bval.jsr.resolver.InstanceResolver;
 import org.apache.bval.jsr.descriptor.ConstraintD;
 import org.apache.bval.jsr.descriptor.DescriptorManager;
 import org.apache.bval.jsr.groups.GroupsComputer;
@@ -38,6 +41,8 @@ import org.apache.bval.jsr.valueextraction.ValueExtractors;
 import org.apache.bval.util.reflection.Reflection;
 import org.apache.commons.weaver.privilizer.Privilizing;
 import org.apache.commons.weaver.privilizer.Privilizing.CallTo;
+
+import static java.util.Collections.sort;
 
 /**
  * Description: Represents the context that is used to create {@link ClassValidator} instances.
@@ -52,6 +57,7 @@ public class ApacheFactoryContext implements ValidatorContext {
     private ParameterNameProvider parameterNameProvider;
     private ConstraintValidatorFactory constraintValidatorFactory;
     private ClockProvider clockProvider;
+    private List<InstanceResolver> instanceResolvers;
 
     /**
      * Create a new ApacheFactoryContext instance.
@@ -124,6 +130,22 @@ public class ApacheFactoryContext implements ValidatorContext {
     public ApacheFactoryContext addValueExtractor(ValueExtractor<?> extractor) {
         valueExtractors.add(extractor);
         return this;
+    }
+
+    public ApacheFactoryContext addInstanceResolvers(InstanceResolver instanceResolver) {
+        if (instanceResolvers == null) {
+            initInstanceResolvers();
+        }
+        instanceResolvers.add(instanceResolver);
+        sort(instanceResolvers);
+        return this;
+    }
+
+    private synchronized void initInstanceResolvers() {
+        if (instanceResolvers == null) {
+            instanceResolvers = new CopyOnWriteArrayList<>();
+            instanceResolvers.addAll(factory.getInstanceResolvers());
+        }
     }
 
     /**
@@ -203,5 +225,12 @@ public class ApacheFactoryContext implements ValidatorContext {
             instance = existing;
         }
         return instance;
+    }
+
+    public List<InstanceResolver> getInstanceResolvers() {
+        if (instanceResolvers == null) {
+            initInstanceResolvers();
+        }
+        return instanceResolvers;
     }
 }
